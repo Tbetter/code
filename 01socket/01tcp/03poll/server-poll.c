@@ -55,8 +55,9 @@ int main()
 
     for(;;)
     {
-        nready = poll(fds, maxi + 1, -1);
-
+        nready = poll(fds, maxi + 1, -1);   //阻塞等待，无穷大的时间
+                                            //1.新客户端连接
+                                            //2.旧客户端发送消息
         if (fds[0].revents & POLLIN)
         {
             // fds = sizeof(caddr);
@@ -65,6 +66,7 @@ int main()
             printf("received from %s at PORT %d\n",
                     inet_ntop(AF_INET, &caddr.sin_addr, str, sizeof(str)),
                     ntohs(caddr.sin_port));
+
             //将客户端连接的网络描述符添加到监听描述符集合中
             for (i = 1; i < BUFSIZ; i++)
             {
@@ -83,18 +85,20 @@ int main()
                 exit(-1);
             }
 
-            //更新maxi，manxi本质上是一个数字
+            //更新maxi，manxi存放了当前监听描述符的个数
             if (i > maxi)
             {
                 maxi = i;
             }
+
+            //poll返回异常时
             if (--nready <= 0)
             {
                 continue;
             }
         }
 
-        //轮询监听，客户端是否发送消息
+        //轮询查看，哪个客户端发送消息
         for (i = 1; i <= maxi; i++)
         {
             //防止赋值出错
@@ -110,7 +114,7 @@ int main()
                 if ((n = read(sockfd, get_buff, sizeof(get_buff))) >= 0)
                 {
 
-                    if (errno == ECONNRESET) /* 收到RST标志 */
+                    if (errno == ECONNRESET) /* 收到RST标志，异常关闭连接 */
                     {
                         printf("client[%d] aborted connection\n", i);
                         close(sockfd);
